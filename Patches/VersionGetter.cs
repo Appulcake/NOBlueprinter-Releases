@@ -20,6 +20,7 @@ namespace Blueprinter
 
                 if (__result.Length > 100)
                 {
+                    Plugin.Log.LogDebug($"Version string too long ({__result})({__result.Length} chars), hashing");
                     var split = __result.IndexOf('_');
                     var prefix = split >= 0 ? __result[..split] : __result;
 
@@ -30,6 +31,7 @@ namespace Blueprinter
                     __result = prefix + "_" + hash;
                 }
 
+                Plugin.Log.LogInfo($"Updated game version to {__result}");
                 if (SceneManager.GetActiveScene().name is "MultiplayerMenu")
                     VersionDisplayOverlay.SetText(versionString);
             }
