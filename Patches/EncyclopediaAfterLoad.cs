@@ -9,7 +9,7 @@ namespace Blueprinter
     {
         private static bool RunOnce;
 
-        private static void Prefix(Encyclopedia __instance)
+        private static void Postfix(Encyclopedia __instance)
         {
             if (RunOnce)
                 return;
