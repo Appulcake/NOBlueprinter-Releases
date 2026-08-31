@@ -103,7 +103,8 @@ namespace Blueprinter
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var bundleRegistry = new BundleRegistry();
 
-            var loadingScreen = fastLoad ? null : BlueprinterLoadingScreen.Create();
+            var noYield = GameManager.IsHeadless;
+            var loadingScreen = fastLoad || noYield ? null : BlueprinterLoadingScreen.Create(); 
             try
             {
                 Action<LoadedBundle, int, int> reportProgress = (loadedBundle, current, total) => loadingScreen?.SetBundleProgress(loadedBundle, current, total);
@@ -140,7 +141,8 @@ namespace Blueprinter
                         if (!moveNext)
                             break;
 
-                        yield return scanEnum.Current;
+                        if (!noYield)
+                            yield return scanEnum.Current;
                     }
                 }
 
@@ -192,7 +194,8 @@ namespace Blueprinter
                     if (!moveNext)
                         break;
 
-                    yield return patchEnum.Current;
+                    if (!noYield)
+                        yield return patchEnum.Current;
                 }
 
                 if (runner.DeferredPatches.Count > 0 && !skipAdditionalAssets)
@@ -230,7 +233,8 @@ namespace Blueprinter
                         if (!moveNext)
                             break;
 
-                        yield return retryEnum.Current;
+                        if (!noYield)
+                            yield return retryEnum.Current;
                     }
 
                     if (rewired != null)
