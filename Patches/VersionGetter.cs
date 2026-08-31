@@ -6,6 +6,7 @@ namespace Blueprinter
 {
     public static class VersionGetterPatch
     {
+        //TODO please stop this madness, use something sensible like steam lobby data
         private static string versionString = "";
         // isolate from vanilla
         [HarmonyPatch(typeof(Application), nameof(Application.version), MethodType.Getter)]
