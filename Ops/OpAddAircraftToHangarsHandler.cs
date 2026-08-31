@@ -72,6 +72,9 @@ namespace Blueprinter.Ops
         {
             private static void Prefix(Airbase __instance, Hangar hangar)
             {
+                if (hangar?.attachedUnit?.definition == null)
+                    return;
+
                 if (__instance.name == "airstrip_city2" && hangar.attachedUnit.UniqueName == "<MAP_UNIT>++hangar_med_10")
                     return;
 
