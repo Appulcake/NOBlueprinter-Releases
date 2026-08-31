@@ -1,6 +1,6 @@
 # Blueprinter
 
-A BepInEx mod for Nuclear Option ([https://store.steampowered.com/app/2168680/Nuclear\_Option/](https://store.steampowered.com/app/2168680/Nuclear_Option/)) to load custom content mods.
+A BepInEx mod for Nuclear Option ([https://store.steampowered.com/app/2168680/Nuclear\_Option/](https://store.steampowered.com/app/2168680/Nuclear_Option/)).
 
 Blueprinter loads `.nobp` mods built with Blueprinter Editor.
 
@@ -18,7 +18,4 @@ Blueprinter scans `BepInEx/plugins` and its subfolders on game start.
 
 ## Configuration
 
-Blueprinter has two optional settings.
-
 - `FastLoad`: Loads every `.nobp` file directly without checking for duplicate or conflicting mod versions. Only enable this when you don't have duplicate versions of any mod installed.
-- `SkipAdditionalAssets`: Skips loading additional game assets used by some mods, for a small further speedup. Mods that depend on these assets may not work correctly with this enabled.
