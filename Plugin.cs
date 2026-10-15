@@ -18,6 +18,9 @@ namespace Blueprinter
     public class Plugin : BaseUnityPlugin
     {
         public static string BundlesSignature = "NOBUNDLES";
+        internal static bool StartupStarted { get; private set; }
+        internal static bool StartupFinished { get; private set; }
+        internal static bool StartupSucceeded { get; private set; }
         public static ManualLogSource Log => Instance?.Logger;
         public static Plugin Instance;
         public string GameVersion;
@@ -110,6 +113,9 @@ namespace Blueprinter
 
         public IEnumerator RunRoutine(Encyclopedia encyclopedia)
         {
+            StartupStarted = true;
+            StartupFinished = false;
+            StartupSucceeded = false;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             GameAssetNameIndex.Start();
             var bundleRegistry = new BundleRegistry();
@@ -335,6 +341,9 @@ namespace Blueprinter
             }
             finally
             {
+                // Indicate on dedicated server that load is complete
+                StartupSucceeded = completed;
+                StartupFinished = true;
                 // Clean up temporary unity references after load complete
                 GameAssetNameIndex.End();
                 // Keep loading screen present until all loading is complete, to prevent possible interaction going into
