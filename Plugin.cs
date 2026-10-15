@@ -33,9 +33,12 @@ namespace Blueprinter
             fastLoad = Config.Bind("General", "FastLoad", false).Value;
             skipAdditionalAssets = Config.Bind("General", "SkipAdditionalAssets", false).Value;
             bundleCacheEnabled = Config.Bind("Bundle Cache", "Enabled", true,
-                "Cache loaded asset bundles into LZ4 format on disk for faster subsequent startups (original mods are not modified).");
+                "Cache loaded asset bundles into LZ4 format on disk for faster subsequent startups " +
+                "(original mods are not modified).");
             maxCacheSizeGiB = Config.Bind("Bundle Cache", "Max Size GiB", 10f,
-                "Maximum bundle cache size in GiB, older/unused entries are removed first. (Set 0 for unlimited)");
+                "Maximum bundle cache size in GiB, older/unused entries are removed first. " +
+                "(Set 0 for unlimited)\n\nCache folder is at Nuclear Option\\BepInEx\\Blueprinter_Cache and " +
+                "can be safely manually deleted at any time too.");
             BundleCache.Configure(bundleCacheEnabled, maxCacheSizeGiB);
             GameObject mgr = Chainloader.ManagerObject;
             if (mgr != null)
@@ -192,7 +195,8 @@ namespace Blueprinter
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Preparing prefabs";
-                    yield return null;
+                    if (!fastLoad)
+                        yield return null;
                 }
 
                 try
@@ -209,7 +213,8 @@ namespace Blueprinter
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Applying patches";
-                    yield return null;
+                    if (!fastLoad)
+                        yield return null;
                 }
 
                 var runner = new PatchRunner(bundleRegistry, reportProgress);
@@ -250,7 +255,8 @@ namespace Blueprinter
                     if (loadingScreen != null)
                     {
                         loadingScreen.Status = "Applying patches";
-                        yield return null;
+                        if (!fastLoad)
+                            yield return null;
                     }
 
                     Exception retryException = null;
@@ -307,7 +313,8 @@ namespace Blueprinter
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Applying ops";
-                    yield return null;
+                    if (!fastLoad)
+                        yield return null;
                 }
 
                 try
@@ -322,7 +329,7 @@ namespace Blueprinter
                     yield break;
                 }
 
-                if (loadingScreen != null)
+                if (loadingScreen != null && !fastLoad)
                     yield return null;
                 completed = true;
             }
