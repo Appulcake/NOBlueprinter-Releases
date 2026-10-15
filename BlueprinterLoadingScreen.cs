@@ -38,6 +38,7 @@ namespace Blueprinter
         private GUIStyle bodyStyle;
         private GUIStyle countStyle;
         public string Status;
+        public string Warning;
 
         public static BlueprinterLoadingScreen Create()
         {
@@ -117,11 +118,13 @@ namespace Blueprinter
                 title += $"    {Status}";
 
             GUI.Label(new Rect(Left, HeaderTop, NameWidth + Gap + BarWidth + Gap + CountWidth, 40f), title, headerStyle);
+            if (!string.IsNullOrEmpty(Warning))
+                GUI.Label(new Rect(Left, HeaderTop + 38f, Screen.width - Left * 2f, 55f), Warning, bodyStyle);
 
             for (int row = 0; row < bundles.Count; row++)
             {
                 var progress = bundles[row];
-                float y = RowsTop + row * (RowHeight + RowSpacing);
+                float y = RowsTop + (string.IsNullOrEmpty(Warning) ? 0f : 55f) + row * (RowHeight + RowSpacing);
                 GUI.Label(new Rect(Left, y, NameWidth, RowHeight), progress.Name, bodyStyle);
 
                 float barX = Left + NameWidth + Gap;
