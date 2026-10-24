@@ -8,8 +8,9 @@ namespace Blueprinter
 {
     public static class ResourcesAssetResolver
     {
-        private static readonly Dictionary<(Type, string), Object> _baseCache = [];
-        private static readonly Dictionary<(AssetBundle, string, Type), Object> _bundleAssetCache = [];
+        private static readonly Dictionary<(Type, string), Object> BaseCache = [];
+        private static readonly Dictionary<(AssetBundle, string, Type), Object> BundleAssetCache = [];
+        private static readonly Dictionary<string, Type> ResolvedTypeCache = new(StringComparer.Ordinal);
         
         public static Object ResolveGameAsset(AssetRef assetRef, bool logMissing = true)
         {
@@ -36,13 +37,22 @@ namespace Blueprinter
                 return null;
             }
 
-            if (_baseCache.TryGetValue((type, key), out var cached))
+            if (BaseCache.TryGetValue((type, key), out var cached))
                 return cached;
 
+            if (GameAssetNameIndex.TryGet(type, key, out var indexedMatch, out var indexedCount))
+            {
+                if (indexedCount > 1)
+                    Log?.LogWarning($"[ResourcesAssetResolver] Game asset {key} type {assetRef.type} has {indexedCount} matches, using first");
+                BaseCache[(type, key)] = indexedMatch;
+                return indexedMatch;
+            }
+
+            var objects = Resources.FindObjectsOfTypeAll(type);
             Object match = null;
             int matchCount = 0;
 
-            foreach (Object obj in Resources.FindObjectsOfTypeAll(type))
+            foreach (Object obj in objects)
             {
                 if (obj == null)
                     continue;
@@ -63,6 +73,8 @@ namespace Blueprinter
                 matchCount++;
             }
 
+            GameAssetNameIndex.Build(type, objects);
+
             if (match == null)
             {
                 missing = true;
@@ -74,7 +86,7 @@ namespace Blueprinter
             if (matchCount > 1)
                 Log?.LogWarning($"[ResourcesAssetResolver] Game asset {key} type {assetRef.type} has {matchCount} matches, using first");
 
-            _baseCache[(type, key)] = match;
+            BaseCache[(type, key)] = match;
             return match;
         }
 
@@ -100,7 +112,7 @@ namespace Blueprinter
             try
             {
                 (AssetBundle AssetBundle, string key, Type type) cacheKey = (bundle.AssetBundle, key, type);
-                if (_bundleAssetCache.TryGetValue(cacheKey, out var cachedAsset))
+                if (BundleAssetCache.TryGetValue(cacheKey, out var cachedAsset))
                     return cachedAsset;
 
                 Object asset = type != null ? bundle.AssetBundle.LoadAsset(key, type) : bundle.AssetBundle.LoadAsset(key);
@@ -109,7 +121,7 @@ namespace Blueprinter
                 else
                     NormalizeBundleAssetShaders(asset, bundle.bundleName, key);
 
-                _bundleAssetCache[cacheKey] = asset;
+                BundleAssetCache[cacheKey] = asset;
                 return asset;
             }
             catch (Exception ex)
@@ -185,7 +197,14 @@ namespace Blueprinter
             if (string.IsNullOrEmpty(typeName))
                 return null;
 
-            return Type.GetType(typeName) ?? typeof(GameObject).Assembly.GetType(typeName);
+            if (ResolvedTypeCache.TryGetValue(typeName, out var cached))
+                return cached;
+
+            var result = Type.GetType(typeName) ?? typeof(GameObject).Assembly.GetType(typeName);
+            if (result != null)
+                ResolvedTypeCache[typeName] = result;
+
+            return result;
         }
 
         private static void NormalizeBundleAssetShaders(Object asset, string bundleName, string assetKey)

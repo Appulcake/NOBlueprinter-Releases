@@ -35,6 +35,20 @@ namespace Blueprinter
             public PatchManifest manifest;
         }
 
+        
+        public IEnumerator PrepareCacheCoroutine()
+        {
+            if (!BundleCache.Enabled)
+                yield break;
+
+            BundleCache.PrepareCaching();
+            foreach (var candidate in GetCandidates())
+            {
+                var prepare = BundleCache.PrepareCandidate(candidate.source, candidate.assembly, candidate.resourceName);
+                while (prepare.MoveNext())
+                    yield return prepare.Current;
+            }
+        }
 
         public void FastLoad()
         {
@@ -295,6 +309,27 @@ namespace Blueprinter
         private static AssetBundle LoadCandidate(BundleCandidate candidate)
         {
             AssetBundle bundle;
+            if (BundleCache.TryGetPreparedPath(candidate.source, out var cachedPath))
+            {
+                try
+                {
+                    bundle = AssetBundle.LoadFromFile(cachedPath);
+                }
+                catch (Exception ex)
+                {
+                    bundle = null;
+                    Plugin.Log.LogWarning($"Cached load failed for {candidate.source}: {ex.Message}");
+                }
+                
+                if (bundle != null)
+                {
+                    return bundle;
+                }
+
+                BundleCache.RejectPreparedPath(candidate.source, cachedPath);
+                Plugin.Log.LogWarning($"Falling back to original {candidate.source}");
+            }
+
             if (candidate.assembly == null)
             {
                 bundle = AssetBundle.LoadFromFile(candidate.source);
@@ -310,7 +345,9 @@ namespace Blueprinter
 
                 using var memory = new MemoryStream();
                 stream.CopyTo(memory);
-                bundle = AssetBundle.LoadFromMemory(memory.ToArray());
+                var bytes = memory.ToArray();
+
+                bundle = AssetBundle.LoadFromMemory(bytes);
             }
 
             return bundle;

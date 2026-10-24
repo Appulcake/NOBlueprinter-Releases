@@ -18,11 +18,16 @@ namespace Blueprinter
     public class Plugin : BaseUnityPlugin
     {
         public static string BundlesSignature = "NOBUNDLES";
+        internal static bool StartupStarted { get; private set; }
+        internal static bool StartupFinished { get; private set; }
+        internal static bool StartupSucceeded { get; private set; }
         public static ManualLogSource Log => Instance?.Logger;
         public static Plugin Instance;
         public string GameVersion;
         private bool fastLoad;
         private bool skipAdditionalAssets;
+        private BepInEx.Configuration.ConfigEntry<bool> bundleCacheEnabled;
+        private BepInEx.Configuration.ConfigEntry<float> maxCacheSizeGiB;
 
         private void Awake()
         {
@@ -30,6 +35,14 @@ namespace Blueprinter
             GameVersion = Application.version;
             fastLoad = Config.Bind("General", "FastLoad", false).Value;
             skipAdditionalAssets = Config.Bind("General", "SkipAdditionalAssets", false).Value;
+            bundleCacheEnabled = Config.Bind("Bundle Cache", "Enabled", true,
+                "Cache loaded asset bundles into LZ4 format on disk for faster subsequent startups " +
+                "(original mods are not modified).");
+            maxCacheSizeGiB = Config.Bind("Bundle Cache", "Max Size GiB", 10f,
+                "Maximum bundle cache size in GiB, older/unused entries are removed first. " +
+                "(Set 0 for unlimited)\n\nCache folder is at Nuclear Option\\BepInEx\\Blueprinter_Cache and " +
+                "can be safely manually deleted at any time too.");
+            BundleCache.Configure(bundleCacheEnabled, maxCacheSizeGiB);
             GameObject mgr = Chainloader.ManagerObject;
             if (mgr != null)
             {
@@ -100,14 +113,46 @@ namespace Blueprinter
 
         public IEnumerator RunRoutine(Encyclopedia encyclopedia)
         {
+            StartupStarted = true;
+            StartupFinished = false;
+            StartupSucceeded = false;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            GameAssetNameIndex.Start();
             var bundleRegistry = new BundleRegistry();
-
+            bool completed = false;
             var noYield = GameManager.IsHeadless;
-            var loadingScreen = fastLoad || noYield ? null : BlueprinterLoadingScreen.Create(); 
+            var loadingScreen = noYield ? null : BlueprinterLoadingScreen.Create(); 
             try
             {
                 Action<LoadedBundle, int, int> reportProgress = (loadedBundle, current, total) => loadingScreen?.SetBundleProgress(loadedBundle, current, total);
+                if (BundleCache.Enabled)
+                {
+                    if (loadingScreen != null)
+                        loadingScreen.Status = "Preparing LZ4 asset bundle cache...";
+                    
+                    var cacheEnumerator = bundleRegistry.PrepareCacheCoroutine();
+                    while (true)
+                    {
+                        bool moveNext;
+                        try
+                        {
+                            moveNext = cacheEnumerator.MoveNext();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.LogError("Cache preparation interrupted, continuing with available cached/original bundles: " + ex);
+                            break;
+                        }
+                        
+                        if (!moveNext)
+                            break;
+                        
+                        yield return cacheEnumerator.Current;
+                    }
+                    if (loadingScreen != null && BundleCache.Warning != null)
+                        loadingScreen.Warning = BundleCache.Warning;
+                }
+
                 if (fastLoad)
                 {
                     try
@@ -149,12 +194,15 @@ namespace Blueprinter
                 if (!bundleRegistry.ScanSucceeded)
                     yield break;
 
+                BundleCache.RemoveRedundantCache(bundleRegistry.Bundles);
+
                 BundlesSignature = bundleRegistry.Bundles.Count == 0 ? "NOBUNDLES" : string.Join("_", bundleRegistry.Bundles.Select(bundle => $"--{bundle.bundleName}-v{bundle.Manifest.modVersion}"));
 
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Preparing prefabs";
-                    yield return null;
+                    if (!fastLoad)
+                        yield return null;
                 }
 
                 try
@@ -171,7 +219,8 @@ namespace Blueprinter
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Applying patches";
-                    yield return null;
+                    if (!fastLoad)
+                        yield return null;
                 }
 
                 var runner = new PatchRunner(bundleRegistry, reportProgress);
@@ -193,8 +242,9 @@ namespace Blueprinter
 
                     if (!moveNext)
                         break;
-
-                    if (!noYield)
+                    
+                    // Don't yield with Fast Load on, the yield empty frames add up to be upwards of several seconds
+                    if (!noYield && !fastLoad)
                         yield return patchEnum.Current;
                 }
 
@@ -211,10 +261,12 @@ namespace Blueprinter
                     if (loadingScreen != null)
                     {
                         loadingScreen.Status = "Applying patches";
-                        yield return null;
+                        if (!fastLoad)
+                            yield return null;
                     }
 
                     Exception retryException = null;
+                    GameAssetNameIndex.Clear();
                     var retryEnum = runner.RetryDeferredPatchesCoroutine();
 
                     while (true)
@@ -233,7 +285,7 @@ namespace Blueprinter
                         if (!moveNext)
                             break;
 
-                        if (!noYield)
+                        if (!noYield && !fastLoad)
                             yield return retryEnum.Current;
                     }
 
@@ -267,7 +319,8 @@ namespace Blueprinter
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Applying ops";
-                    yield return null;
+                    if (!fastLoad)
+                        yield return null;
                 }
 
                 try
@@ -282,19 +335,36 @@ namespace Blueprinter
                     yield break;
                 }
 
-                if (loadingScreen != null)
+                if (loadingScreen != null && !fastLoad)
                     yield return null;
-
+                completed = true;
             }
             finally
             {
-                if ((bundleRegistry.DuplicateMods.Count > 0 || bundleRegistry.OutdatedMods.Count > 0) && !Application.isBatchMode && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
-                    BlueprinterIssuePopup.Show(bundleRegistry.DuplicateMods, bundleRegistry.OutdatedMods);
+                // Indicate on dedicated server that load is complete
+                StartupSucceeded = completed;
+                StartupFinished = true;
+                // Clean up temporary unity references after load complete
+                GameAssetNameIndex.End();
+                // Keep loading screen present until all loading is complete, to prevent possible interaction going into
+                // a match with BP not fully finished yet
+                if (completed)
+                    Log.LogInfo($"[Plugin] Done in {stopwatch.Elapsed.TotalSeconds:F2}s");
+                else
+                    Log.LogError($"[Plugin] Startup ended before completion after {stopwatch.Elapsed.TotalSeconds:F2}s");
+                if (!completed && loadingScreen != null)
+                {
+                    loadingScreen.Status = "Initialisation failed, restart the game and check the log!";
+                }
                 else
                     BlueprinterLoadingScreen.DestroyInstance();
+                
+                if (completed && (bundleRegistry.DuplicateMods.Count > 0 || bundleRegistry.OutdatedMods.Count > 0) &&
+                    !Application.isBatchMode && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                {
+                    BlueprinterIssuePopup.Show(bundleRegistry.DuplicateMods, bundleRegistry.OutdatedMods);
+                }
             }
-
-            Log.LogInfo($"[Plugin] Done in {stopwatch.Elapsed.TotalSeconds:F2}s");
         }
 
         private void RegisterLiveries(IReadOnlyList<LoadedBundle> bundles)

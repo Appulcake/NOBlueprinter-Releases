@@ -8,10 +8,12 @@ namespace Blueprinter
 {
     public static class JsonUtilities
     {
+        private static readonly Dictionary<Type, FieldInfo[]> FieldCache = new();
         public static T Deserialize<T>(string json)
         {
             var data = MiniJSON.Json.Deserialize(json);
-            return (T)ConvertToType(data, typeof(T));
+            var result = (T)ConvertToType(data, typeof(T));
+            return result;
         }
 
         private static object ConvertToType(object value, Type targetType)
@@ -54,7 +56,11 @@ namespace Blueprinter
         private static object ConvertToObject(IDictionary<string, object> dict, Type targetType)
         {
             var instance = Activator.CreateInstance(targetType);
-            var fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public);
+            if (!FieldCache.TryGetValue(targetType, out var fields))
+            {
+                fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public);
+                FieldCache[targetType] = fields;
+            }
 
             foreach (var field in fields)
             {
