@@ -58,18 +58,26 @@ namespace Blueprinter
             {
                 foreach (var candidate in GetCandidates())
                 {
-                    bundle = LoadCandidate(candidate);
+                    if (BundleCache.TryGetPreparedPath(candidate.source, out var cachedPath))
+                        bundle = AssetBundle.LoadFromFile(cachedPath);
+                    else
+                        bundle = LoadCandidate(candidate);
                     if (bundle == null)
                     {
-                        Plugin.Log.LogError($"[BundleRegistry] Could not load {candidate.source}");
-                        return;
+                        var name = candidate.assembly == null ? Path.GetFileName(candidate.source) : candidate.resourceName;
+                        throw new InvalidOperationException(
+                            $"Could not load \"{name}\"\n" +
+                            "Another version of the same mod may already be loaded.\n" +
+                            "Check Player.Log for details.");
                     }
 
                     var manifest = LoadManifest(bundle, candidate.source);
                     if (manifest == null)
                     {
-                        Plugin.Log.LogError($"[BundleRegistry] Fast load failed {candidate.source}");
-                        return;
+                        var name = candidate.assembly == null ? Path.GetFileName(candidate.source) : candidate.resourceName;
+                        throw new InvalidOperationException(
+                            $"Could not read the manifest from \"{name}\"\n" +
+                            "Check Player.Log for details.");
                     }
 
                     var loadedBundle = new LoadedBundle

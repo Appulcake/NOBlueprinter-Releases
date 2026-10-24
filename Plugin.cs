@@ -53,7 +53,22 @@ namespace Blueprinter
                 DontDestroyOnLoad(mgr);
             }
 
-            new Harmony(MyPluginInfo.PLUGIN_GUID).PatchAll();
+            var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+            try
+            {
+                harmony.PatchAll();
+            }
+            catch (Exception ex)
+            {
+                Log.LogError("[Plugin] Failed to apply Harmony patches");
+                Log.LogError(ex);
+                harmony.UnpatchSelf();
+                Api.SetState(Api.State.Failed);
+                BlueprinterIssuePopup.ShowError(
+                    "Harmony patches failed to apply.\n" +
+                    "This may be caused by a game update or incompatible mod.\n" +
+                    "Check the log for details.");
+            }
         }
 
         private async Task<GameObject> LoadAdditionalAssets()
@@ -122,6 +137,7 @@ namespace Blueprinter
             var gameAssetNameIndexStarted = false;
             BundleRegistry bundleRegistry = null;
             BlueprinterLoadingScreen loadingScreen = null;
+            string startupFailure = null;
             try
             {
                 GameAssetNameIndex.Start();
@@ -166,6 +182,7 @@ namespace Blueprinter
                     }
                     catch (Exception ex)
                     {
+                        startupFailure = ex.Message;
                         Log.LogError("[Plugin] Bundle loading failed");
                         Log.LogError(ex);
                         yield break;
@@ -363,16 +380,17 @@ namespace Blueprinter
                         Log.LogInfo($"[Plugin] Done in {stopwatch.Elapsed.TotalSeconds:F2}s");
                     else
                         Log.LogError($"[Plugin] Startup ended before completion after {stopwatch.Elapsed.TotalSeconds:F2}s");
-                    if (!completed && loadingScreen != null)
+
+                    BlueprinterLoadingScreen.DestroyInstance();
+
+                    var canShowPopup = !Application.isBatchMode && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null;
+                    if (!completed && canShowPopup)
                     {
-                        loadingScreen.Status = "Initialisation failed, restart the game and check the log!";
+                        BlueprinterIssuePopup.ShowError(
+                            startupFailure ?? "Startup did not complete.\nCheck the log for details.");
                     }
-                    else
-                        BlueprinterLoadingScreen.DestroyInstance();
-                
-                    if (completed && bundleRegistry != null &&
-                        (bundleRegistry.DuplicateMods.Count > 0 || bundleRegistry.OutdatedMods.Count > 0) &&
-                        !Application.isBatchMode && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                    else if (completed && bundleRegistry != null &&
+                        (bundleRegistry.DuplicateMods.Count > 0 || bundleRegistry.OutdatedMods.Count > 0) && canShowPopup)
                     {
                         BlueprinterIssuePopup.Show(bundleRegistry.DuplicateMods, bundleRegistry.OutdatedMods);
                     }

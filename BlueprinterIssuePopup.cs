@@ -11,8 +11,10 @@ namespace Blueprinter
         private const float RowHeight = 26f;
         private const float ContentInset = 36f;
 
-        private IReadOnlyList<string> duplicateMods;
-        private IReadOnlyList<string> outdatedMods;
+        private IReadOnlyList<string> duplicateMods = Array.Empty<string>();
+        private IReadOnlyList<string> outdatedMods = Array.Empty<string>();
+        private string title = "Blueprinter issues detected";
+        private IReadOnlyList<string> errorLines = Array.Empty<string>();
         private GUIStyle titleStyle;
         private GUIStyle sectionStyle;
         private GUIStyle textStyle;
@@ -24,6 +26,13 @@ namespace Blueprinter
             var popup = new GameObject("BlueprinterIssuePopup").AddComponent<BlueprinterIssuePopup>();
             popup.duplicateMods = duplicateMods;
             popup.outdatedMods = outdatedMods;
+        }
+
+        public static void ShowError(string message)
+        {
+            var popup = new GameObject("BlueprinterIssuePopup").AddComponent<BlueprinterIssuePopup>();
+            popup.title = "Blueprinter startup failed";
+            popup.errorLines = message.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         private void OnGUI()
@@ -47,14 +56,20 @@ namespace Blueprinter
             GUI.DrawTexture(panelRect, Texture2D.whiteTexture);
             GUI.color = oldColor;
 
-            GUI.Label(new Rect(panelRect.x + 28f, panelRect.y + 20f, panelRect.width - 56f, 34f), "Blueprinter issues detected", titleStyle);
+            GUI.Label(new Rect(panelRect.x + 28f, panelRect.y + 20f, panelRect.width - 56f, 34f), title, titleStyle);
 
             var y = panelRect.y + 82f;
+            if (errorLines.Count > 0)
+                y = DrawSection("Startup error", errorLines, y);
+
             if (duplicateMods.Count > 0)
                 y = DrawSection("Duplicate mod files", duplicateMods, y);
 
             if (outdatedMods.Count > 0)
                 DrawSection("Outdated mods", outdatedMods, y);
+
+            if (GUI.Button(new Rect(panelRect.xMax - 328f, panelRect.yMax - 64f, 200, 40f), "Open Player.Log Folder", buttonStyle))
+                Application.OpenURL(new Uri(Application.persistentDataPath).AbsoluteUri);
 
             if (GUI.Button(new Rect(panelRect.xMax - 148f, panelRect.yMax - 64f, 120f, 40f), "Close", buttonStyle))
                 Destroy(gameObject);
