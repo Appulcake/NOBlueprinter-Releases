@@ -18,9 +18,6 @@ namespace Blueprinter
     public class Plugin : BaseUnityPlugin
     {
         public static string BundlesSignature = "NOBUNDLES";
-        internal static bool StartupStarted { get; private set; }
-        internal static bool StartupFinished { get; private set; }
-        internal static bool StartupSucceeded { get; private set; }
         public static ManualLogSource Log => Instance?.Logger;
         public static Plugin Instance;
         public string GameVersion;
@@ -113,17 +110,19 @@ namespace Blueprinter
 
         public IEnumerator RunRoutine(Encyclopedia encyclopedia)
         {
-            StartupStarted = true;
-            StartupFinished = false;
-            StartupSucceeded = false;
+            Api.SetState(Api.State.LoadingBundles);
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            GameAssetNameIndex.Start();
-            var bundleRegistry = new BundleRegistry();
-            bool completed = false;
-            var noYield = GameManager.IsHeadless;
-            var loadingScreen = noYield ? null : BlueprinterLoadingScreen.Create(); 
+            var completed = false;
+            var gameAssetNameIndexStarted = false;
+            BundleRegistry bundleRegistry = null;
+            BlueprinterLoadingScreen loadingScreen = null;
             try
             {
+                GameAssetNameIndex.Start();
+                gameAssetNameIndexStarted = true;
+                bundleRegistry = new BundleRegistry();
+                var noYield = GameManager.IsHeadless;
+                loadingScreen = noYield ? null : BlueprinterLoadingScreen.Create();
                 Action<LoadedBundle, int, int> reportProgress = (loadedBundle, current, total) => loadingScreen?.SetBundleProgress(loadedBundle, current, total);
                 if (BundleCache.Enabled)
                 {
@@ -216,6 +215,7 @@ namespace Blueprinter
                     yield break;
                 }
 
+                Api.SetState(Api.State.ApplyingPatches);
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Applying patches";
@@ -316,6 +316,7 @@ namespace Blueprinter
                     }
                 }
 
+                Api.SetState(Api.State.ApplyingOps);
                 if (loadingScreen != null)
                 {
                     loadingScreen.Status = "Applying ops";
@@ -341,28 +342,39 @@ namespace Blueprinter
             }
             finally
             {
-                // Indicate on dedicated server that load is complete
-                StartupSucceeded = completed;
-                StartupFinished = true;
-                // Clean up temporary unity references after load complete
-                GameAssetNameIndex.End();
-                // Keep loading screen present until all loading is complete, to prevent possible interaction going into
-                // a match with BP not fully finished yet
-                if (completed)
-                    Log.LogInfo($"[Plugin] Done in {stopwatch.Elapsed.TotalSeconds:F2}s");
-                else
-                    Log.LogError($"[Plugin] Startup ended before completion after {stopwatch.Elapsed.TotalSeconds:F2}s");
-                if (!completed && loadingScreen != null)
+                var cleanupCompleted = !gameAssetNameIndexStarted;
+                try
                 {
-                    loadingScreen.Status = "Initialisation failed, restart the game and check the log!";
-                }
-                else
-                    BlueprinterLoadingScreen.DestroyInstance();
+                    // Clean up temporary unity references after load complete
+                    if (gameAssetNameIndexStarted)
+                    {
+                        GameAssetNameIndex.End();
+                        cleanupCompleted = true;
+                    }
+                    // Keep loading screen present until all loading is complete, to prevent possible interaction going into
+                    // a match with BP not fully finished yet
+                    if (completed)
+                        Log.LogInfo($"[Plugin] Done in {stopwatch.Elapsed.TotalSeconds:F2}s");
+                    else
+                        Log.LogError($"[Plugin] Startup ended before completion after {stopwatch.Elapsed.TotalSeconds:F2}s");
+                    if (!completed && loadingScreen != null)
+                    {
+                        loadingScreen.Status = "Initialisation failed, restart the game and check the log!";
+                    }
+                    else
+                        BlueprinterLoadingScreen.DestroyInstance();
                 
-                if (completed && (bundleRegistry.DuplicateMods.Count > 0 || bundleRegistry.OutdatedMods.Count > 0) &&
-                    !Application.isBatchMode && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                    if (completed && bundleRegistry != null &&
+                        (bundleRegistry.DuplicateMods.Count > 0 || bundleRegistry.OutdatedMods.Count > 0) &&
+                        !Application.isBatchMode && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+                    {
+                        BlueprinterIssuePopup.Show(bundleRegistry.DuplicateMods, bundleRegistry.OutdatedMods);
+                    }
+
+                }
+                finally
                 {
-                    BlueprinterIssuePopup.Show(bundleRegistry.DuplicateMods, bundleRegistry.OutdatedMods);
+                    Api.SetState(completed && cleanupCompleted ? Api.State.Ready : Api.State.Failed);
                 }
             }
         }

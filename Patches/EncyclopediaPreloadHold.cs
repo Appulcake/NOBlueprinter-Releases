@@ -26,17 +26,18 @@ internal static class EncyclopediaPreloadHold
     private static async UniTask WaitForBlueprinter(UniTask original, CancellationToken cancellationToken)
     {
         await original;
-        if (!Plugin.StartupStarted)
+        if (Api.CurrentState == Api.State.NotStarted)
             throw new InvalidOperationException("Blueprinter did not start during Encyclopedia.Preload(), " +
                                                 "refusing to initialise the dedicated server.");
         
-        if (!Plugin.StartupFinished)
+        if (Api.CurrentState is not Api.State.Ready and not Api.State.Failed)
         {
             Plugin.Log.LogInfo("[Plugin] Waiting for Blueprinter before dedicated server network initialisation");
-            await UniTask.WaitUntil(() => Plugin.StartupFinished, cancellationToken: cancellationToken);
+            await UniTask.WaitUntil(() => Api.CurrentState is Api.State.Ready or Api.State.Failed,
+                cancellationToken: cancellationToken);
         }
         
-        if (!Plugin.StartupSucceeded)
+        if (Api.CurrentState != Api.State.Ready)
             throw new InvalidOperationException("Blueprinter initialisation failed, refusing to initialise the " +
                                                 "dedicated server with incomplete mods.");
         
