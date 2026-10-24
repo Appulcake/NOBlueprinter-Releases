@@ -21,6 +21,7 @@ namespace Blueprinter
         public static ManualLogSource Log => Instance?.Logger;
         public static Plugin Instance;
         internal static int LoadingScreenImageLimit { get; private set; } = 3;
+        internal static int HintLimit { get; private set; } = 3;
         public string GameVersion;
         private bool fastLoad;
         private bool skipAdditionalAssets;
@@ -35,6 +36,8 @@ namespace Blueprinter
             skipAdditionalAssets = Config.Bind("General", "SkipAdditionalAssets", false).Value;
             LoadingScreenImageLimit = Config.Bind("Loading Screens", "Max Images Per Mod", 3,
                 "Maximum number of loading screen images each mod can add. Set 0 to disable mod-added loading screens.").Value;
+            HintLimit = Config.Bind("Hints", "Max Hints Per Mod", 3,
+                "Maximum number of hints each mod can add. Set 0 to disable mod-added hints.").Value;
             bundleCacheEnabled = Config.Bind("Bundle Cache", "Enabled", true,
                 "Cache loaded asset bundles into LZ4 format on disk for faster subsequent startups " +
                 "(original mods are not modified).");

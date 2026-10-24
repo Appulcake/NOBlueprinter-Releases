@@ -225,6 +225,9 @@ namespace Blueprinter
                     case OpAddLoadingScreensHandler.OpId:
                         ApplyOp<OpAddLoadingScreensPayload>(bundle, op, OpAddLoadingScreensHandler.Handle);
                         break;
+                    case OpAddHintsHandler.OpId:
+                        ApplyOp<OpAddHintsPayload>(bundle, op, OpAddHintsHandler.Handle);
+                        break;
                     case OpAddWeaponToHardpointHandler.OpId:
                         ApplyOp<OpAddWeaponToHardpointPayload>(bundle, op, OpAddWeaponToHardpointHandler.Handle);
                         break;
