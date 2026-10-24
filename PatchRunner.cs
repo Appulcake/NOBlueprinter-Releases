@@ -59,7 +59,7 @@ namespace Blueprinter
                     }
 
                     var gameLocation = patch.GameAsset;
-                    var gameAssetRoot = ResourcesAssetResolver.ResolveGameAsset(gameLocation.asset, false, out var missingGameAsset);
+                    var gameAssetRoot = ResolvePatchSource(loadedBundle, patch, out var missingGameAsset);
                     if (gameAssetRoot == null)
                     {
                         if (missingGameAsset)
@@ -100,6 +100,22 @@ namespace Blueprinter
                 ReportProgress(loadedBundle);
                 yield return null;
             }
+        }
+
+        private Object ResolvePatchSource(LoadedBundle ownerBundle, AssetPatch patch, out bool missingGameAsset)
+        {
+            missingGameAsset = false;
+            if (string.IsNullOrEmpty(patch.SourceBundle))
+                return ResourcesAssetResolver.ResolveGameAsset(patch.GameAsset.asset, false, out missingGameAsset);
+
+            var sourceBundle = bundles.Bundles.Find(bundle => string.Equals(bundle.bundleName, patch.SourceBundle, StringComparison.OrdinalIgnoreCase));
+            if (sourceBundle == null)
+            {
+                Plugin.Log.LogWarning($"[PatchRunner] {ownerBundle.Manifest.modName} references missing bundle {patch.SourceBundle} for {patch.GameAsset.asset.locator ?? patch.GameAsset.asset.name}");
+                return null;
+            }
+
+            return ResourcesAssetResolver.ResolveBundleAsset(sourceBundle, patch.GameAsset.asset);
         }
 
         public IEnumerator RetryDeferredPatchesCoroutine()

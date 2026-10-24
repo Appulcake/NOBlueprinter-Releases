@@ -274,9 +274,9 @@ namespace Blueprinter
                 return null;
             }
 
-            if (manifest.schemaVersion > 3)
+            if (manifest.schemaVersion > 4)
             {
-                Plugin.Log.LogWarning($"[BundleRegistry] Unsupported manifest schema {manifest.schemaVersion} in {source}; runtime supports up to 3");
+                Plugin.Log.LogWarning($"[BundleRegistry] Unsupported manifest schema {manifest.schemaVersion} in {source}; runtime supports up to 4");
                 return null;
             }
 
