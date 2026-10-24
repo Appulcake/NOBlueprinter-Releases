@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using UnityEngine;
@@ -14,23 +15,38 @@ namespace Blueprinter.Ops
     public static class OpAddLoadingScreensHandler
     {
         public const string OpId = "OpAddLoadingScreens";
+        private static readonly Dictionary<LoadedBundle, int> addedImageCounts = [];
 
         public static void Handle(LoadedBundle bundle, OpAddLoadingScreensPayload payload)
         {
-            Sprite[] newImages = payload?.imagesAssets?.Select(a => ResourcesAssetResolver.ResolveBundleAsset(bundle, a)).OfType<Sprite>().ToArray();
+            int limit = Plugin.LoadingScreenImageLimit;
+            addedImageCounts.TryGetValue(bundle, out int addedCount);
+            int remaining = limit - addedCount;
+            if (remaining <= 0)
+            {
+                if (payload?.imagesAssets?.Length > 0)
+                    Plugin.Log.LogWarning($"[Ops] {bundle.Manifest?.modName ?? bundle.bundleName} reached the loading screen image limit ({limit})");
+                return;
+            }
 
-            if (newImages == null || newImages.Length == 0)
+            Sprite[] resolvedImages = payload?.imagesAssets?.Select(a => ResourcesAssetResolver.ResolveBundleAsset(bundle, a)).OfType<Sprite>().ToArray();
+            if (resolvedImages == null || resolvedImages.Length == 0)
                 return;
 
+            Sprite[] newImages = resolvedImages.Take(remaining).ToArray();
             LoadingScreen loadingScreen = Resources.FindObjectsOfTypeAll<LoadingScreen>().FirstOrDefault();
             if (loadingScreen == null)
             {
                 Plugin.Log.LogWarning("[Ops] LoadingScreen prefab missing LoadingScreen component");
                 return;
             }
+
             loadingScreen.images = [.. loadingScreen.images, .. newImages];
+            addedImageCounts[bundle] = addedCount + newImages.Length;
 
             Plugin.Log.LogDebug($"[Ops] Added {newImages.Length} images to loading screen pool");
+            if (resolvedImages.Length > newImages.Length)
+                Plugin.Log.LogWarning($"[Ops] {bundle.Manifest?.modName ?? bundle.bundleName} exceeded the loading screen image limit ({limit}); skipped {resolvedImages.Length - newImages.Length}");
         }
     }
 }
