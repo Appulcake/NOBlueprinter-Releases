@@ -116,6 +116,7 @@ namespace Blueprinter.Ops
                     }
 
                     definitions.Add(definition);
+                    Plugin.Log.LogInfo($"[EncyclopediaLoader] Added {bundle.bundleName}: {jsonKey}");
                 }
             }
         }
