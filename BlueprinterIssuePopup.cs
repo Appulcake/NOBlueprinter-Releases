@@ -68,7 +68,7 @@ namespace Blueprinter
             if (outdatedMods.Count > 0)
                 DrawSection("Outdated mods", outdatedMods, y);
 
-            if (GUI.Button(new Rect(panelRect.xMax - 328f, panelRect.yMax - 64f, 200, 40f), "Open Player.Log Folder", buttonStyle))
+            if (GUI.Button(new Rect(panelRect.xMax - 400f, panelRect.yMax - 64f, 240, 40f), "Open Player.Log Folder", buttonStyle))
                 Application.OpenURL(new Uri(Application.persistentDataPath).AbsoluteUri);
 
             if (GUI.Button(new Rect(panelRect.xMax - 148f, panelRect.yMax - 64f, 120f, 40f), "Close", buttonStyle))
