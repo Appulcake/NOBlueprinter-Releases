@@ -53,7 +53,7 @@ namespace Blueprinter
 
                     if (patch.GameAsset?.asset == null)
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] Patch {patch.GameAsset?.id ?? "unknown"} missing game asset");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Patch {patch.GameAsset?.id ?? "unknown"} missing game asset");
                         progress[loadedBundle].Current += locationCount;
                         continue;
                     }
@@ -111,7 +111,7 @@ namespace Blueprinter
             var sourceBundle = bundles.Bundles.Find(bundle => string.Equals(bundle.bundleName, patch.SourceBundle, StringComparison.OrdinalIgnoreCase));
             if (sourceBundle == null)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] {ownerBundle.Manifest.modName} references missing bundle {patch.SourceBundle} for {patch.GameAsset.asset.locator ?? patch.GameAsset.asset.name}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({ownerBundle.bundleName}) References missing bundle {patch.SourceBundle} for {patch.GameAsset.asset.locator ?? patch.GameAsset.asset.name}");
                 return null;
             }
 
@@ -257,13 +257,13 @@ namespace Blueprinter
                         ApplyOp<OpFindAircraftToHangarPayload>(bundle, op, OpFindAircraftToHangarHandler.Handle);
                         break;
                     default:
-                        Plugin.Log.LogWarning($"[PatchRunner] Unsupported op {op.opId} in {manifest.modName}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({bundle.bundleName}) Unsupported op {op.opId}");
                         break;
                 }
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Op {op.opId} failed in {manifest.modName}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({bundle.bundleName}) Op {op.opId} failed");
                 Plugin.Log.LogWarning(ex);
             }
         }
@@ -272,7 +272,7 @@ namespace Blueprinter
         {
             if (string.IsNullOrEmpty(op.payloadJson))
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Empty payload {op.opId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({bundle.bundleName}) Empty payload {op.opId}");
                 return;
             }
 
@@ -283,14 +283,14 @@ namespace Blueprinter
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Invalid payload {op.opId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({bundle.bundleName}) Invalid payload {op.opId}");
                 Plugin.Log.LogWarning(ex);
                 return;
             }
 
             if (payload == null)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Null payload {op.opId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({bundle.bundleName}) Null payload {op.opId}");
                 return;
             }
 
@@ -301,14 +301,14 @@ namespace Blueprinter
         {
             if (loc == null)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Null location in patch {patchId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Null location in patch {patchId}");
                 return false;
             }
             var locationId = loc.id;
 
             if (loc.asset == null)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Missing asset reference {patchId} {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Missing asset reference {patchId} {locationId}");
                 return false;
             }
 
@@ -322,7 +322,7 @@ namespace Blueprinter
 
             if (string.IsNullOrEmpty(loc.memberPath))
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Empty member path {patchId} {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Empty member path {patchId} {locationId}");
                 return false;
             }
 
@@ -331,14 +331,14 @@ namespace Blueprinter
             {
                 // SPECIAL CASE #0: Camera rendererIndex (URP)
                 if (string.Equals(memberPath, "rendererIndex", StringComparison.Ordinal) || string.Equals(memberPath, "m_RendererIndex", StringComparison.Ordinal))
-                    return ApplyCameraRendererIndexPatch(bundleTargetObject, gameAsset, patchId, locationId);
+                    return ApplyCameraRendererIndexPatch(loadedBundle, bundleTargetObject, gameAsset, patchId, locationId);
 
                 // SPECIAL CASE #1: AudioMixer -> AudioMixerGroup wiring via outputAudioMixerGroup::<groupName>
                 if (memberPath.StartsWith("outputAudioMixerGroup", StringComparison.Ordinal))
                 {
                     if (gameAsset is not UnityEngine.Audio.AudioMixer mixer)
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] Asset {gameAsset.GetType().FullName} is not AudioMixer patch {patchId} location {locationId}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Asset {gameAsset.GetType().FullName} is not AudioMixer patch {patchId} location {locationId}");
                         return false;
                     }
 
@@ -346,7 +346,7 @@ namespace Blueprinter
                     var sepIndex = memberPath.IndexOf(Sep, StringComparison.Ordinal);
                     if (sepIndex < 0 || sepIndex + Sep.Length >= memberPath.Length)
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] Missing AudioMixer group in path {memberPath} patch {patchId} location {locationId}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Missing AudioMixer group in path {memberPath} patch {patchId} location {locationId}");
                         return false;
                     }
 
@@ -355,13 +355,13 @@ namespace Blueprinter
                     var groups = mixer.FindMatchingGroups(groupHint);
                     if (groups == null || groups.Length == 0)
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] AudioMixer {mixer.name} missing group {groupHint} patch {patchId} location {locationId}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) AudioMixer {mixer.name} missing group {groupHint} patch {patchId} location {locationId}");
                         return false;
                     }
 
                     if (!MemberPathSetter.TryApply(bundleTargetObject, memberPath, groups[0]))
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] Could not set {memberPath} patch {patchId} location {locationId}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Could not set {memberPath} patch {patchId} location {locationId}");
                         return false;
                     }
                     return true;
@@ -369,14 +369,14 @@ namespace Blueprinter
 
                 // SPECIAL CASE #2: Renderer.materials[] / sharedMaterials[]
                 if (memberPath.StartsWith("sharedMaterials[", StringComparison.Ordinal) || memberPath.StartsWith("materials[", StringComparison.Ordinal))
-                    return ApplyRendererMaterialArrayPatch(bundleTargetObject, gameAsset, memberPath, patchId, locationId);
+                    return ApplyRendererMaterialArrayPatch(loadedBundle, bundleTargetObject, gameAsset, memberPath, patchId, locationId);
 
                 // SPECIAL CASE #3: Material texture property
                 if (bundleTargetObject is Material material && memberPath.StartsWith("materialTexture::", StringComparison.Ordinal))
                 {
                     if (gameAsset is not Texture texture)
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] Asset {gameAsset?.GetType().FullName} is not Texture patch {patchId} location {locationId}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Asset {gameAsset?.GetType().FullName} is not Texture patch {patchId} location {locationId}");
                         return false;
                     }
 
@@ -384,7 +384,7 @@ namespace Blueprinter
 
                     if (!material.HasProperty(propertyName))
                     {
-                        Plugin.Log.LogWarning($"[PatchRunner] Material {material.name} missing texture property {propertyName} patch {patchId} location {locationId}");
+                        Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Material {material.name} missing texture property {propertyName} patch {patchId} location {locationId}");
                         return false;
                     }
 
@@ -395,24 +395,24 @@ namespace Blueprinter
                 // Default behaviour: assign the resolved GameAsset directly.
                 if (!MemberPathSetter.TryApply(bundleTargetObject, memberPath, gameAsset))
                 {
-                    Plugin.Log.LogWarning($"[PatchRunner] Could not set {memberPath} patch {patchId} location {locationId}");
+                    Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Could not set {memberPath} patch {patchId} location {locationId}");
                     return false;
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Patch {patchId} location {locationId} member {loc.memberPath} failed");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Patch {patchId} location {locationId} member {loc.memberPath} failed");
                 Plugin.Log.LogWarning(ex);
                 return false;
             }
         }
-        private bool ApplyCameraRendererIndexPatch(Object bundleTargetObject, Object gameAsset, string patchId, string locationId)
+        private bool ApplyCameraRendererIndexPatch(LoadedBundle loadedBundle, Object bundleTargetObject, Object gameAsset, string patchId, string locationId)
         {
             var rpAsset = GraphicsSettings.currentRenderPipeline as ScriptableObject;
             if (rpAsset == null)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Missing render pipeline patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Missing render pipeline patch {patchId} location {locationId}");
                 return false;
             }
 
@@ -421,14 +421,14 @@ namespace Blueprinter
 
             if (field == null)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Missing renderer list on {rpAsset.name} patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Missing renderer list on {rpAsset.name} patch {patchId} location {locationId}");
                 return false;
             }
 
             var listObj = field.GetValue(rpAsset);
             if (listObj is not Array arr)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Renderer list on {rpAsset.name} is not an array patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Renderer list on {rpAsset.name} is not an array patch {patchId} location {locationId}");
                 return false;
             }
 
@@ -446,7 +446,7 @@ namespace Blueprinter
 
             if (idx < 0)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Renderer {rendererAsset.name} not found in {rpAsset.name} patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Renderer {rendererAsset.name} not found in {rpAsset.name} patch {patchId} location {locationId}");
                 return false;
             }
 
@@ -454,7 +454,7 @@ namespace Blueprinter
             var field2 = t.Field("m_RendererIndex");
             if (!field2.FieldExists())
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Missing m_RendererIndex on {bundleTargetObject.GetType().FullName} patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Missing m_RendererIndex on {bundleTargetObject.GetType().FullName} patch {patchId} location {locationId}");
                 return false;
             }
 
@@ -462,17 +462,17 @@ namespace Blueprinter
             return true;
         }
 
-        private bool ApplyRendererMaterialArrayPatch(Object target, Object gameAsset, string memberPath, string patchId, string locationId)
+        private bool ApplyRendererMaterialArrayPatch(LoadedBundle loadedBundle, Object target, Object gameAsset, string memberPath, string patchId, string locationId)
         {
             if (target is not Renderer renderer)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Target {target.GetType().FullName} is not a Renderer patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Target {target.GetType().FullName} is not a Renderer patch {patchId} location {locationId}");
                 return false;
             }
 
             if (gameAsset is not Material mat)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Asset {gameAsset.GetType().FullName} is not a Material patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Asset {gameAsset.GetType().FullName} is not a Material patch {patchId} location {locationId}");
                 return false;
             }
 
@@ -484,14 +484,14 @@ namespace Blueprinter
             int closeBracket = memberPath.IndexOf(']', prefix.Length);
             if (closeBracket < 0)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Malformed member path {memberPath} patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Malformed member path {memberPath} patch {patchId} location {locationId}");
                 return false;
             }
 
             string indexStr = memberPath[prefix.Length..closeBracket];
             if (!int.TryParse(indexStr, out var idx) || idx < 0)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Invalid material index {indexStr} path {memberPath} patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Invalid material index {indexStr} path {memberPath} patch {patchId} location {locationId}");
                 return false;
             }
 
@@ -500,7 +500,7 @@ namespace Blueprinter
 
             if (arr == null || length == 0 || idx >= length)
             {
-                Plugin.Log.LogWarning($"[PatchRunner] Material index {idx} out of range {length} on {renderer.gameObject.name} patch {patchId} location {locationId}");
+                Plugin.Log.LogWarning($"[PatchRunner] ({loadedBundle.bundleName}) Material index {idx} out of range {length} on {renderer.gameObject.name} patch {patchId} location {locationId}");
                 return false;
             }
 

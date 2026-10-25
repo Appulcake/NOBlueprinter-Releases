@@ -28,7 +28,7 @@ public static class PrefabHashAssigner
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"[PrefabHashAssigner] Could not load GameObjects from {bundle.source}");
+                Plugin.Log.LogWarning($"[PrefabHashAssigner] ({bundle.bundleName}) Could not load GameObjects from {bundle.source}");
                 Plugin.Log.LogWarning(ex);
                 continue;
             }

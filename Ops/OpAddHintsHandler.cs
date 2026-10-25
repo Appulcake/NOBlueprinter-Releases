@@ -63,7 +63,7 @@ namespace Blueprinter.Ops
             }
 
             if (skipped > 0)
-                Plugin.Log.LogWarning($"[Ops] {bundle.Manifest?.modName ?? bundle.bundleName} exceeded the hint limit ({limit}); skipped {skipped}");
+                Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Exceeded the hint limit ({limit}); skipped {skipped}");
         }
 
         [HarmonyPatch(typeof(HintsTipsDisplay), nameof(HintsTipsDisplay.ReadHints))]

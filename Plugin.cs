@@ -161,7 +161,7 @@ namespace Blueprinter
                         }
                         catch (Exception ex)
                         {
-                            Log.LogError("Cache preparation interrupted, continuing with available cached/original bundles: " + ex);
+                            Log.LogError("[Plugin] Cache preparation interrupted, continuing with available cached/original bundles: " + ex);
                             break;
                         }
                         
@@ -335,7 +335,7 @@ namespace Blueprinter
                     {
                         Log.LogWarning($"[Plugin] {runner.DeferredPatches.Count} deferred patches unresolved");
                         foreach (var item in runner.DeferredPatches)
-                            Log.LogWarning($"[Plugin] {item.Bundle.Manifest.modName} patch {item.Patch?.GameAsset?.id ?? "unknown"} unresolved");
+                            Log.LogWarning($"[Plugin] ({item.Bundle.bundleName}) Patch {item.Patch?.GameAsset?.id ?? "unknown"} unresolved");
                     }
                 }
 

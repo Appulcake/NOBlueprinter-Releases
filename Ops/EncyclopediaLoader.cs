@@ -60,7 +60,7 @@ namespace Blueprinter.Ops
 
                 if (string.IsNullOrEmpty(op.payloadJson))
                 {
-                    Plugin.Log.LogWarning($"[EncyclopediaLoader] Empty payload in {bundle.bundleName}");
+                    Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Empty payload");
                     continue;
                 }
 
@@ -71,14 +71,14 @@ namespace Blueprinter.Ops
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.LogWarning($"[EncyclopediaLoader] Invalid payload in {bundle.bundleName}");
+                    Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Invalid payload");
                     Plugin.Log.LogWarning(ex);
                     continue;
                 }
 
                 if (payload?.entries == null || payload.entries.Length == 0)
                 {
-                    Plugin.Log.LogWarning($"[EncyclopediaLoader] Empty entries in {bundle.bundleName}");
+                    Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Empty entries");
                     continue;
                 }
 
@@ -86,7 +86,7 @@ namespace Blueprinter.Ops
                 {
                     if (entry == null)
                     {
-                        Plugin.Log.LogWarning($"[EncyclopediaLoader] Null asset reference in {bundle.bundleName}");
+                        Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Null asset reference");
                         continue;
                     }
 
@@ -96,7 +96,7 @@ namespace Blueprinter.Ops
 
                     if (obj is not UnitDefinition && obj is not WeaponMount)
                     {
-                        Plugin.Log.LogWarning($"[EncyclopediaLoader] Unsupported type {obj.GetType().Name} for {obj.name}");
+                        Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Unsupported type {obj.GetType().Name} for {obj.name}");
                         continue;
                     }
 
@@ -104,19 +104,19 @@ namespace Blueprinter.Ops
                     var jsonKey = GetJsonKey(definition);
                     if (string.IsNullOrWhiteSpace(jsonKey))
                     {
-                        Plugin.Log.LogWarning($"[EncyclopediaLoader] Missing JSON key on {obj.name}");
+                        Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Missing JSON key on {obj.name}");
                         continue;
                     }
 
                     var keys = definition is UnitDefinition ? unitKeys : weaponKeys;
                     if (!keys.Add(jsonKey))
                     {
-                        Plugin.Log.LogWarning($"[EncyclopediaLoader] Duplicate {obj.GetType().Name} JSON key {jsonKey} on {obj.name}");
+                        Plugin.Log.LogWarning($"[EncyclopediaLoader] ({bundle.bundleName}) Duplicate {obj.GetType().Name} JSON key {jsonKey} on {obj.name}");
                         continue;
                     }
 
                     definitions.Add(definition);
-                    Plugin.Log.LogInfo($"[EncyclopediaLoader] Added {bundle.bundleName}: {jsonKey}");
+                    Plugin.Log.LogInfo($"[EncyclopediaLoader] ({bundle.bundleName}) Loaded definition {jsonKey}");
                 }
             }
         }

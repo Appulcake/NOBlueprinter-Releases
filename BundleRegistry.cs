@@ -326,7 +326,7 @@ namespace Blueprinter
                 catch (Exception ex)
                 {
                     bundle = null;
-                    Plugin.Log.LogWarning($"Cached load failed for {candidate.source}: {ex.Message}");
+                    Plugin.Log.LogWarning($"[BundleRegistry] Cached load failed for {candidate.source}: {ex.Message}");
                 }
                 
                 if (bundle != null)
@@ -335,7 +335,7 @@ namespace Blueprinter
                 }
 
                 BundleCache.RejectPreparedPath(candidate.source, cachedPath);
-                Plugin.Log.LogWarning($"Falling back to original {candidate.source}");
+                Plugin.Log.LogWarning($"[BundleRegistry] Falling back to original {candidate.source}");
             }
 
             if (candidate.assembly == null)

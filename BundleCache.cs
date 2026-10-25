@@ -50,7 +50,7 @@ internal static class BundleCache
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Initial cleanup skipped: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Initial cleanup skipped: {ex.Message}");
         }
     }
     
@@ -94,7 +94,7 @@ internal static class BundleCache
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"Cache metadata update failed for {bundle.bundleName}: {ex.Message}");
+                Plugin.Log.LogWarning($"[BundleCache] Cache metadata update failed for {bundle.bundleName}: {ex.Message}");
             }
         }
         
@@ -113,12 +113,12 @@ internal static class BundleCache
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.LogWarning($"Cache version cleanup skipped {meta}: {ex.Message}");
+                    Plugin.Log.LogWarning($"[BundleCache] Cache version cleanup skipped {meta}: {ex.Message}");
                 }
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Cache version scan failed: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Cache version scan failed: {ex.Message}");
         }
         
         try
@@ -127,7 +127,7 @@ internal static class BundleCache
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Cache trim failed: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Cache trim failed: {ex.Message}");
         }
     }
     
@@ -172,7 +172,7 @@ internal static class BundleCache
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Could not start conversion for {source}: {ex}");
+            Plugin.Log.LogWarning($"[BundleCache] Could not start conversion for {source}: {ex}");
             if (IsDiskFull(ex))
                 DisableOnStorageFailure(ex.Message);
         }
@@ -206,11 +206,11 @@ internal static class BundleCache
             SafeDelete(prepare.MetaPath);
             File.Move(prepare.TempMetaPath, prepare.MetaPath);
             PreparedPaths[source] = prepare.CachePath;
-            Plugin.Log.LogInfo($"Cache done for source {source}, in LZ4 format, cache size: {outputSize}");
+            Plugin.Log.LogInfo($"[BundleCache] Cache done for source {source}, in LZ4 format, cache size: {outputSize}");
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Conversion not cached for {source}: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Conversion not cached for {source}: {ex.Message}");
             if (IsDiskFull(ex))
                 DisableOnStorageFailure(ex.Message);
         }
@@ -246,7 +246,7 @@ internal static class BundleCache
             {
                 PreparedPaths[source] = p.CachePath;
                 p.Hit = true;
-                Plugin.Log.LogInfo($"Cache hit from \"{source}\", size: {new FileInfo(p.CachePath).Length} bytes");
+                Plugin.Log.LogInfo($"[BundleCache] Cache hit from \"{source}\", size: {new FileInfo(p.CachePath).Length} bytes");
                 return p;
             }
             
@@ -274,12 +274,12 @@ internal static class BundleCache
             }
             
             Plugin.Log.LogInfo(
-                $"Cache convert from source: \"{source}\" to LZ4, size: {new FileInfo(p.InputPath).Length} bytes");
+                $"[BundleCache] Cache convert from source: \"{source}\" to LZ4, size: {new FileInfo(p.InputPath).Length} bytes");
             return p;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Cache preparation failed for {source}: {ex}");
+            Plugin.Log.LogWarning($"[BundleCache] Cache preparation failed for {source}: {ex}");
             if (IsDiskFull(ex))
                 DisableOnStorageFailure(ex.Message);
             Cleanup(p);
@@ -356,7 +356,7 @@ internal static class BundleCache
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning($"Cache cleanup skipped for {bundle}: {ex.Message}");
+                Plugin.Log.LogWarning($"[BundleCache] Cache cleanup skipped for {bundle}: {ex.Message}");
             }
         
         var cacheLimit = LimitBytes();
@@ -397,7 +397,7 @@ internal static class BundleCache
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Cannot remove cache at {path}: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Cannot remove cache at {path}: {ex.Message}");
             return false;
         }
     }
@@ -409,7 +409,7 @@ internal static class BundleCache
         
         _disabledThisRun = true;
         Warning = "Bundle cache disabled: insufficient disk space, loading original asset bundles.";
-        Plugin.Log.LogError($"Cache disabled: {details}, clearing only own cache files.");
+        Plugin.Log.LogError($"[BundleCache] Cache disabled: {details}, clearing only own cache files.");
         if (_enabled is { Value: true })
             try
             {
@@ -418,7 +418,7 @@ internal static class BundleCache
             catch (Exception ex)
             {
                 Plugin.Log.LogWarning(
-                    $"Could not set cache setting to off in BepInEx config (disk may be full): {ex.Message}");
+                    $"[BundleCache] Could not set cache setting to off in BepInEx config (disk may be full): {ex.Message}");
             }
         
         PreparedPaths.Clear();
@@ -434,7 +434,7 @@ internal static class BundleCache
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Could not completely clear cache: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Could not completely clear cache: {ex.Message}");
         }
     }
     
@@ -485,7 +485,7 @@ internal static class BundleCache
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Cache cleanup skipped {path}: {ex.Message}");
+            Plugin.Log.LogWarning($"[BundleCache] Cache cleanup skipped {path}: {ex.Message}");
         }
     }
     

@@ -25,7 +25,7 @@ namespace Blueprinter.Ops
             if (remaining <= 0)
             {
                 if (payload?.imagesAssets?.Length > 0)
-                    Plugin.Log.LogWarning($"[Ops] {bundle.Manifest?.modName ?? bundle.bundleName} reached the loading screen image limit ({limit})");
+                    Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Reached the loading screen image limit ({limit})");
                 return;
             }
 
@@ -37,7 +37,7 @@ namespace Blueprinter.Ops
             LoadingScreen loadingScreen = Resources.FindObjectsOfTypeAll<LoadingScreen>().FirstOrDefault();
             if (loadingScreen == null)
             {
-                Plugin.Log.LogWarning("[Ops] LoadingScreen prefab missing LoadingScreen component");
+                Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) LoadingScreen prefab missing LoadingScreen component");
                 return;
             }
 
@@ -46,7 +46,7 @@ namespace Blueprinter.Ops
 
             Plugin.Log.LogDebug($"[Ops] Added {newImages.Length} images to loading screen pool");
             if (resolvedImages.Length > newImages.Length)
-                Plugin.Log.LogWarning($"[Ops] {bundle.Manifest?.modName ?? bundle.bundleName} exceeded the loading screen image limit ({limit}); skipped {resolvedImages.Length - newImages.Length}");
+                Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Exceeded the loading screen image limit ({limit}); skipped {resolvedImages.Length - newImages.Length}");
         }
     }
 }

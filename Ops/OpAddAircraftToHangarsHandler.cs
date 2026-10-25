@@ -24,17 +24,17 @@ namespace Blueprinter.Ops
 
         private static readonly List<(string UnitJsonKey, string HangarName, AircraftDefinition Aircraft)> Pending = [];
 
-        public static void Handle(LoadedBundle _, OpAddAircraftToHangarsPayload payload)
+        public static void Handle(LoadedBundle bundle, OpAddAircraftToHangarsPayload payload)
         {
             if (Encyclopedia.Lookup == null || !Encyclopedia.Lookup.TryGetValue(payload.aircraftJsonKey ?? string.Empty, out var unit) || unit is not AircraftDefinition aircraft)
             {
-                Plugin.Log.LogWarning($"[Ops] Aircraft {payload.aircraftJsonKey} not found");
+                Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Aircraft {payload.aircraftJsonKey} not found");
                 return;
             }
 
             if (payload.hangars == null || payload.hangars.Length == 0)
             {
-                Plugin.Log.LogWarning($"[Ops] No hangar targets for {payload.aircraftJsonKey}");
+                Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) No hangar targets for {payload.aircraftJsonKey}");
                 return;
             }
 
@@ -42,13 +42,13 @@ namespace Blueprinter.Ops
             {
                 if (target == null || string.IsNullOrWhiteSpace(target.hangarUnitJsonKey))
                 {
-                    Plugin.Log.LogWarning("[Ops] Invalid hangar target");
+                    Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Invalid hangar target");
                     continue;
                 }
 
                 if (target.hangarNames == null || target.hangarNames.Length == 0)
                 {
-                    Plugin.Log.LogWarning($"[Ops] No hangars for {target.hangarUnitJsonKey}");
+                    Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) No hangars for {target.hangarUnitJsonKey}");
                     continue;
                 }
 
@@ -56,7 +56,7 @@ namespace Blueprinter.Ops
                 {
                     if (string.IsNullOrWhiteSpace(hangarName))
                     {
-                        Plugin.Log.LogWarning($"[Ops] Invalid hangar for {target.hangarUnitJsonKey}");
+                        Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Invalid hangar for {target.hangarUnitJsonKey}");
                         continue;
                     }
 

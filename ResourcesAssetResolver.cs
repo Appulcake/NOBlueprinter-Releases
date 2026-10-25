@@ -98,14 +98,14 @@ namespace Blueprinter
             string key = targetRef.locator ?? targetRef.name;
             if (string.IsNullOrEmpty(key))
             {
-                Log?.LogWarning($"[ResourcesAssetResolver] Missing locator for bundle {bundle.bundleName}");
+                Log?.LogWarning($"[ResourcesAssetResolver] ({bundle.bundleName}) Missing locator");
                 return null;
             }
 
             Type type = ResolveType(targetRef.type);
             if (!string.IsNullOrEmpty(targetRef.type) && type == null)
             {
-                Log?.LogWarning($"[ResourcesAssetResolver] Unknown type {targetRef.type} for {key}");
+                Log?.LogWarning($"[ResourcesAssetResolver] ({bundle.bundleName}) Unknown type {targetRef.type} for {key}");
                 return null;
             }
 
@@ -117,7 +117,7 @@ namespace Blueprinter
 
                 Object asset = type != null ? bundle.AssetBundle.LoadAsset(key, type) : bundle.AssetBundle.LoadAsset(key);
                 if (asset == null)
-                    Log?.LogWarning($"[ResourcesAssetResolver] Could not load {key} type {targetRef.type} from {bundle.bundleName}");
+                    Log?.LogWarning($"[ResourcesAssetResolver] ({bundle.bundleName}) Could not load {key} type {targetRef.type}");
                 else
                     NormalizeBundleAssetShaders(asset, bundle.bundleName, key);
 
@@ -126,7 +126,7 @@ namespace Blueprinter
             }
             catch (Exception ex)
             {
-                Log?.LogWarning($"[ResourcesAssetResolver] Load failed {key} from {bundle.source}");
+                Log?.LogWarning($"[ResourcesAssetResolver] ({bundle.bundleName}) Load failed {key} from {bundle.source}");
                 Log?.LogWarning(ex);
                 return null;
             }

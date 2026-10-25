@@ -29,7 +29,7 @@ namespace Blueprinter
 
                     if (_liveries.ContainsKey(entry.guid))
                     {
-                        Plugin.Log.LogWarning($"[LiveryAddressableLocator] Duplicate livery GUID {entry.guid} in {bundle.bundleName}");
+                        Plugin.Log.LogWarning($"[LiveryAddressableLocator] ({bundle.bundleName}) Duplicate livery GUID {entry.guid}");
                         continue;
                     }
 

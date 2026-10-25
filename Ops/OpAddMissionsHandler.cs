@@ -38,7 +38,7 @@ namespace Blueprinter.Ops
             {
                 if (!resourceGroups.TryGetValue(groupName, out ResourceGroup groupAsset) || groupAsset == null)
                 {
-                    Plugin.Log.LogWarning($"[Ops] Mission group {groupName} not found");
+                    Plugin.Log.LogWarning($"[Ops] ({bundle.bundleName}) Mission group {groupName} not found");
                     continue;
                 }
 
