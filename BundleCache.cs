@@ -17,6 +17,7 @@ internal static class BundleCache
     private const string CacheFormat = "BP-Cache-v1";
     private const string BundleLabel = "bundle:";
     private const long FreeSpaceReserve = 256L * 1024 * 1024;
+    private const float RecompressTimeoutSeconds = 180f;
     private static readonly TimeSpan MaxIdle = TimeSpan.FromDays(7);
     private static readonly Dictionary<string, string> PreparedPaths = new(StringComparer.Ordinal);
     private static ConfigEntry<bool> _enabled;
@@ -185,7 +186,28 @@ internal static class BundleCache
         if (op == null)
             yield break;
         
-        yield return op;
+        // Handle failsafe in case LZ4 preparation gets indefinitely stuck (unity decompress/recompress never returns
+        // errors if the bundle is corrupt, so it leaves game forever stuck in "preparing LZ4 cache")
+        // This times it out if it's still working after RecompressTimeoutSeconds on the same cache and actually show
+        // the error message + try to fall back using regular/non-cache for it
+        // RecompressTimeoutSeconds timeout is set to 180s for testing, I don't believe even slower setups should take
+        var recompressStarted = Time.realtimeSinceStartup;
+        while (!op.isDone)
+        {
+            if (Time.realtimeSinceStartup - recompressStarted >= RecompressTimeoutSeconds)
+            {
+                Plugin.Log.LogError($"[BundleCache] Recompression timed out after {RecompressTimeoutSeconds:0}s for "
+                                    + $"{source}. Trying the original asset bundle instead, check Player.log if it "
+                                    + "still can't load.");
+                Warning = "One bundle's cache conversion timed out, loading its original asset bundles. Check "
+                          +" Player.log for details.";
+                // Can't cancel this, unity doesn't have a cancellation API for this native operation, so no deleting
+                // input or .writing output (next startup removes abandoned .writing temp files)
+                yield break;
+            }
+            yield return null;
+        }
+        
         try
         {
             if (!op.success || !File.Exists(prepare.TempOutputPath) || new FileInfo(prepare.TempOutputPath).Length == 0)
